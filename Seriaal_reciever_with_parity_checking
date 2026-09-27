@@ -1,0 +1,56 @@
+module top_module(
+    input clk,
+    input in,
+    input reset,    // Synchronous reset
+    output [7:0] out_byte,
+    output done
+); 
+    parameter idle=8'd0,start=8'd1,a=8'd2,b=8'd3,c=8'd5,d=8'd6,e=8'd7,f=8'd8,g=8'd9,h=8'd10,i=8'd11,stop=8'd12,X=8'd13;
+    reg [7:0] state,next_state;
+    always @(posedge clk) state<=reset?idle:next_state;
+    always @(*) begin
+        case (state)
+            idle:next_state=(~in)?start:idle;
+            start:next_state=a;
+            a:next_state=b;
+            b:next_state=c;
+            c:next_state=d;
+            d:next_state=e;
+            e:next_state=f;
+            f:next_state=g;
+            g:next_state=h;
+            h:next_state=i;
+            i:next_state=in?stop:X;
+            X:next_state=in?idle:X;
+            stop:next_state=(~in)?start:idle;
+            default: next_state=idle;
+        endcase
+    end
+
+    reg [7:0] data;
+    always @(posedge clk) begin
+        if (reset)
+            data<=8'd0;
+        else if (next_state>=a && next_state<=h)
+            data<={in,data[7:1]};
+    end
+
+    // Only count real bits (8 data + 1 parity) while receiving them
+    wire receiving   =  (state==start)||(state>=a && state<=h);
+    wire parity_in   = receiving ? in : 1'b0;
+    // Clear the accumulator whenever we're not mid-byte (covers the
+    // stop->start back-to-back case, not just idle->start)
+    wire parity_reset = (state==idle)||(state==stop);
+
+    wire parity_check;
+    parity parity_inst (
+        .clk   (clk),
+        .reset (parity_reset),
+        .in    (parity_in),
+        .odd   (parity_check)
+    );
+
+    assign done=((state==stop)&&(parity_check));
+    assign out_byte=done?data:8'd0;
+
+endmodule
