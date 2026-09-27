@@ -1,0 +1,40 @@
+module top_module(
+    input clk,
+    input load,
+    input [255:0] data,
+    output [255:0] q );
+ 
+    always @(posedge clk) begin
+        if (load)
+            q<=data;
+        else begin
+            for (int i=0;i<256;i=i+1) begin
+                automatic integer k=0;
+                if (i==0)
+                    k=(q[1]+q[15]+q[255]+q[240]+q[241]+q[16]+q[31]+q[17]);
+                else if (i==15)
+                    k=(q[240]+q[255]+q[254]+q[0]+q[14]+q[16]+q[31]+q[30]);
+                else if (i==240)
+                    k=(q[241]+q[255]+q[225]+q[224]+q[239]+q[1]+q[0]+q[15]);
+                else if (i==255)
+                    k=(q[224]+q[239]+q[238]+q[240]+q[254]+q[0]+q[15]+q[14]);                   
+                else if ((i>0)&&(i<15))
+                    k=(q[i-1]+q[i+1]+q[i+16]+q[i+17]+q[i+15]+q[i+240]+q[i+239]+q[i+241]);
+                else if ((i>240)&&(i<255))
+                    k=(q[i-16]+q[i-17]+q[i-15]+q[i-1]+q[i+1]+q[i-239]+q[i-240]+q[i-241]);
+                else if (i%16==0)
+                    k=(q[i-16]+q[i-1]+q[i-15]+q[i+15]+q[i+1]+q[i+16]+q[i+17]+q[i+31]);
+                else if (i%16==15)
+                    k=(q[i-16]+q[i-31]+q[i-15]+q[i-1]+q[i+1]+q[i+16]+q[i-17]+q[i+15]);
+                else
+                    k=(q[i-16]+q[i-17]+q[i-15]+q[i-1]+q[i+1]+q[i+16]+q[i+17]+q[i+15]);
+                if (k==3)
+                    q[i]<=1'b1;
+                else if (k==2)
+                    q[i]<=q[i];
+                else 
+                    q[i]<=1'b0;
+            end
+        end
+    end
+endmodule
