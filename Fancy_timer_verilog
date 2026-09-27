@@ -1,0 +1,56 @@
+module top_module (
+    input clk,
+    input reset,      // Synchronous reset
+    input data,
+    output [3:0] count,
+    output counting,
+    output done,
+    input ack );
+    parameter a=4'd0,b=4'd1,c=4'd2,d=4'd3,e=4'd4,f=4'd5,g=4'd6,h=4'd7,i=4'd8,j=4'd9;
+    reg [3:0] state,next_state;
+    reg shift_ena;
+    always @(posedge clk) begin
+        if (reset)
+            state<=a;
+        else
+            state<=next_state;
+    end
+    always@(*) begin
+        case(state)
+            a:next_state=(data)?b:a;
+            b:next_state=(data)?c:a;
+            c:next_state=(data)?c:d;
+            d:next_state=(data)?e:a;
+            e:next_state=f;
+            f:next_state=g;
+            g:next_state=h;
+            h:next_state=i;
+            i:next_state=(done_counting)?j:i;
+            j:next_state=(ack)?a:j;
+        endcase
+    end
+    assign counting=(state==i);
+    assign done=(state==j);
+    assign shift_ena=(state==e||state==f||state==g||state==h);
+    reg [3:0]q;
+    always @(posedge clk) begin
+        if (shift_ena)
+            q<={q[2:0],data};
+        else if (count_ena)
+            q<=q-1'd1;
+    end
+    assign count=q; 
+    reg [9:0] count1k;
+    reg count_ena;
+    reg done_counting;
+    always @(posedge clk) begin
+        if (reset || !counting)
+            count1k <= 10'd0;
+        else if (count1k == 10'd999)
+            count1k <= 10'd0;
+        else
+            count1k <= count1k + 1'b1;
+    end
+    assign count_ena = (counting && count1k == 10'd999);
+    assign done_counting = (q == 4'd0 && count_ena);
+endmodule
